@@ -1,9 +1,19 @@
 from django.shortcuts import render
-
-# Create your views here.
+from django.contrib.auth import authenticate, login
 from django.shortcuts import render, redirect
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth import login as auth_login
 from .models import Ticket
 from .forms import TicketForm
+from django.http import HttpResponseRedirect
+from django.http import HttpRequest, HttpResponse
+from django.urls import reverse
+
+# def home(request: HttpRequest) -> HttpResponse:
+#     return render(request, 'home.html')
+def home(request):
+    return render(request, 'home.htm')
+
 
 def add_ticket(request):
     if request.method == "POST":
@@ -13,16 +23,27 @@ def add_ticket(request):
             return redirect('tickets_list')
     else:
         form = TicketForm()
-    return render(request, 'tickets/add_ticket.html', {'form': form})
+    return render(request, 'add_ticket.html', {'form': form})
 
 def tickets_list(request):
     tickets = Ticket.objects.all().order_by('-creation_date')
-    return render(request, 'tickets/tickets_list.html', {'tickets': tickets})
+    return render(request, 'tickets_list.html', {'tickets': tickets})
 
 
-from django.contrib.auth import authenticate, login
-from django.contrib.auth.decorators import login_required
-def user_login(request):
+
+def register(request):
+    if request.method == "POST":
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            auth_login(request, user)
+            return HttpResponseRedirect(reverse('login_view'))  
+    else:
+        form = UserCreationForm()
+    return render(request, 'register.html', {'form': form})
+
+
+def login_view(request):
     if request.method == "POST":
         username = request.POST.get('username')
         password = request.POST.get('password')
@@ -30,9 +51,5 @@ def user_login(request):
         if user:
             if user.is_active:
                 login(request, user)
-                return redirect('tickets_list')
-    return render(request, 'tickets/login.html', {})
-
-@login_required
-def tickets_list(request):
-    ...
+                return HttpResponseRedirect(reverse('add_ticket'))  
+    return render(request, 'login.html', {})
